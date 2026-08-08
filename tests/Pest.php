@@ -13,11 +13,18 @@ uses(TestCase::class)->in(__DIR__);
 
 function runCustomerHealthStorageMigrations(): void
 {
-    foreach (['create_customer_health_events_table', 'create_customer_health_milestones_table', 'create_customer_health_scores_table'] as $migration) {
+    foreach (['create_customer_health_events_table', 'create_customer_health_milestones_table', 'create_customer_health_scores_table', 'create_customer_health_summaries_table'] as $migration) {
         /** @var Migration $instance */
         $instance = require __DIR__."/../database/migrations/{$migration}.php.stub";
         $instance->up();
     }
+}
+
+function runCustomerHealthSummaryMigration(): void
+{
+    /** @var Migration $migration */
+    $migration = require __DIR__.'/../database/migrations/create_customer_health_summaries_table.php.stub';
+    $migration->up();
 }
 
 function createTrackableFixtures(string $connection = 'testing'): void
@@ -45,6 +52,8 @@ function dropCustomerHealthStorage(string $connection): void
         TableNames::default('milestones'),
         'tenant_customer_health_scores',
         TableNames::default('scores'),
+        'tenant_customer_health_summaries',
+        TableNames::default('summaries'),
         'tenant_product_events',
         TableNames::default('events'),
         'test_actors',

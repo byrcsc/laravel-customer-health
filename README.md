@@ -210,7 +210,9 @@ is exactly what database-per-tenant packages switch for you.
 For `spatie/laravel-multitenancy` with one database per tenant:
 
 - Include the package migrations in your tenant migrations path; the
-  summaries migration runs on the landlord connection.
+  summaries migration is a separate published file and runs on
+  `summary_connection`, so multi-database apps can run only that file for the
+  landlord while the other package migrations run per tenant.
 - Run the recompute per tenant: `php artisan tenants:artisan
   customer-health:recompute`.
 - Summaries carry the current tenant, so the landlord can answer "which

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use ByRcsc\LaravelCustomerHealth\Support\TableNames;
+use ByRcsc\LaravelCustomerHealth\Tenancy\NullTenantResolver;
 
 return [
 
@@ -64,6 +65,18 @@ return [
     'checklists' => [],
 
     'scores' => [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tenant identity
+    |--------------------------------------------------------------------------
+    |
+    | This invokable class supplies the optional tenant id stored in landlord
+    | summaries. The null resolver is correct for single-database apps.
+    |
+    */
+
+    'tenant_resolver' => NullTenantResolver::class,
 
     /*
     |--------------------------------------------------------------------------

@@ -1,0 +1,44 @@
+<?php
+
+declare(strict_types=1);
+
+use ByRcsc\LaravelCustomerHealth\Support\TableNames;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        $summary = config('customer-health.summary_connection');
+        $package = config('customer-health.connection');
+        $connection = is_string($summary) && $summary !== '' ? $summary : $package;
+
+        Schema::connection(is_string($connection) ? $connection : null)
+            ->create(TableNames::summaries(), function (Blueprint $table): void {
+                $table->id();
+                $table->char('summary_key', 64)->unique('ch_summaries_summary_key_unique');
+                $table->string('tenant_id')->nullable();
+                $table->string('subject_type');
+                $table->string('subject_id', 191);
+                $table->string('score');
+                $table->unsignedTinyInteger('value');
+                $table->string('state');
+                $table->timestampTz('computed_at');
+                $table->timestampsTz();
+
+                $table->index(['state', 'score'], 'ch_summaries_state_score_idx');
+            });
+    }
+
+    public function down(): void
+    {
+        $summary = config('customer-health.summary_connection');
+        $package = config('customer-health.connection');
+        $connection = is_string($summary) && $summary !== '' ? $summary : $package;
+
+        Schema::connection(is_string($connection) ? $connection : null)
+            ->dropIfExists(TableNames::summaries());
+    }
+};

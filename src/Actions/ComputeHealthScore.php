@@ -24,6 +24,7 @@ final readonly class ComputeHealthScore
         private Dispatcher $dispatcher,
         private DatabaseManager $database,
         private ScoreComputationLock $lock,
+        private SyncHealthSummary $syncSummary,
     ) {}
 
     public function handle(Trackable $subject, ?string $score = null): ScoreResult
@@ -85,6 +86,7 @@ final readonly class ComputeHealthScore
                 'breakdown' => $breakdown,
                 'computed_at' => $computedAt,
             ]);
+            $this->syncSummary->handle($identity, $record);
 
             return [$record, is_string($previousState) ? $previousState : null];
         });

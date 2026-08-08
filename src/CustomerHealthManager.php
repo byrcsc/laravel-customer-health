@@ -12,6 +12,7 @@ use ByRcsc\LaravelCustomerHealth\Data\ProductEventData;
 use ByRcsc\LaravelCustomerHealth\Events\ProductEvent;
 use ByRcsc\LaravelCustomerHealth\Jobs\RecordProductEvent as RecordProductEventJob;
 use ByRcsc\LaravelCustomerHealth\Models\HealthScoreRecord;
+use ByRcsc\LaravelCustomerHealth\Models\HealthSummary;
 use ByRcsc\LaravelCustomerHealth\Models\Milestone;
 use ByRcsc\LaravelCustomerHealth\Models\ProductEventRecord;
 use ByRcsc\LaravelCustomerHealth\Queries\FeatureUsageQuery;
@@ -159,6 +160,22 @@ final readonly class CustomerHealthManager
             ->oldest('id')
             ->get()
             ->map(fn (HealthScoreRecord $record): ScoreResult => ScoreResult::fromRecord($record));
+    }
+
+    /** @return Builder<HealthSummary> */
+    public function summaries(): Builder
+    {
+        return HealthSummary::query();
+    }
+
+    /** @return Builder<HealthSummary> */
+    public function inState(string $state, ?string $score = null): Builder
+    {
+        $definition = $this->scores->resolve($score);
+
+        return $this->summaries()
+            ->where('state', $state)
+            ->where('score', $definition::name());
     }
 
     /** @return Builder<HealthScoreRecord> */
