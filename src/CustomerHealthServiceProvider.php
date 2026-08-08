@@ -16,6 +16,7 @@ final class CustomerHealthServiceProvider extends PackageServiceProvider
         // register here when they land (issues C2 and D2).
         $package
             ->name('laravel-customer-health')
-            ->hasConfigFile();
+            ->hasConfigFile()
+            ->hasMigrations();
     }
 }
