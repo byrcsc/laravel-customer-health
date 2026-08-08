@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+use ByRcsc\LaravelCustomerHealth\Support\TableNames;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        $connection = config('customer-health.connection');
+
+        Schema::connection(is_string($connection) ? $connection : null)
+            ->create(TableNames::events(), function (Blueprint $table): void {
+                $table->id();
+                $table->string('subject_type');
+                $table->string('subject_id', 191);
+                $table->string('actor_type')->nullable();
+                $table->string('actor_id', 191)->nullable();
+                $table->string('name');
+                $table->string('feature');
+                $table->json('properties');
+                $table->timestampTz('occurred_at');
+                $table->timestampTz('created_at')->useCurrent();
+
+                $table->index(
+                    ['subject_type', 'subject_id', 'name', 'occurred_at'],
+                    'ch_events_subject_name_time_idx',
+                );
+                $table->index(['name', 'occurred_at'], 'ch_events_name_time_idx');
+                $table->index(['feature', 'occurred_at'], 'ch_events_feature_time_idx');
+            });
+    }
+
+    public function down(): void
+    {
+        $connection = config('customer-health.connection');
+
+        Schema::connection(is_string($connection) ? $connection : null)
+            ->dropIfExists(TableNames::events());
+    }
+};
