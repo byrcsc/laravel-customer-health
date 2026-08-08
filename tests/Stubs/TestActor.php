@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace ByRcsc\LaravelCustomerHealth\Tests\Stubs;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-final class TestActor extends Model
+final class TestActor extends Authenticatable
 {
     public $timestamps = false;
 

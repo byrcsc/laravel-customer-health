@@ -48,4 +48,17 @@ return [
 
     'summary_connection' => null,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Product events
+    |--------------------------------------------------------------------------
+    |
+    | Every product event must be registered. This lets the package resolve
+    | event names back to declarations for milestone and feature queries,
+    | and makes missing configuration fail before data is silently dropped.
+    |
+    */
+
+    'events' => [],
+
 ];

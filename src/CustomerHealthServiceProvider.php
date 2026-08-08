@@ -4,16 +4,34 @@ declare(strict_types=1);
 
 namespace ByRcsc\LaravelCustomerHealth;
 
+use ByRcsc\LaravelCustomerHealth\Events\ProductEvent;
+use ByRcsc\LaravelCustomerHealth\Registry\EventRegistry;
+use Illuminate\Contracts\Config\Repository;
+use Illuminate\Contracts\Foundation\Application;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
 final class CustomerHealthServiceProvider extends PackageServiceProvider
 {
+    public function packageRegistered(): void
+    {
+        $this->app->singleton(EventRegistry::class, function (Application $app): EventRegistry {
+            $config = $app->make(Repository::class);
+
+            /** @var mixed $configured */
+            $configured = $config->get('customer-health.events', []);
+
+            /** @var list<class-string<ProductEvent>> $eventClasses */
+            $eventClasses = is_array($configured) ? array_values($configured) : [];
+
+            return new EventRegistry($eventClasses);
+        });
+
+        $this->app->singleton(CustomerHealthManager::class);
+    }
+
     public function configurePackage(Package $package): void
     {
-        // Migrations register here when the schema lands (issue A2); the
-        // `customer-health:recompute` and `customer-health:purge` commands
-        // register here when they land (issues C2 and D2).
         $package
             ->name('laravel-customer-health')
             ->hasConfigFile()
