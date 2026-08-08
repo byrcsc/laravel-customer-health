@@ -236,9 +236,7 @@ it('timestamps a computation after it acquires the serialization lock', function
     MutableSignal::$value = 80;
     $identity = MorphIdentity::from($subject, 'subject');
     $key = json_encode([$identity->type, $identity->id, 'mutable'], JSON_THROW_ON_ERROR);
-    $connection = DB::connection('testing');
-    $connection->beginTransaction();
-    app(ScoreComputationLock::class)->acquire($connection, $key);
+    DB::disconnect('testing');
     $sockets = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
     if ($sockets === false) {
         throw new RuntimeException('Unable to create score lock barrier.');
@@ -251,9 +249,8 @@ it('timestamps a computation after it acquires the serialization lock', function
     if ($pid === 0) {
         fclose($sockets[0]);
         try {
-            DB::disconnect('testing');
+            fread($sockets[1], 1);
             DB::reconnect('testing');
-            fwrite($sockets[1], 'r');
             fclose($sockets[1]);
             $workerSubject = TestSubject::on('testing')->findOrFail($subject->getKey());
             CustomerHealth::compute($workerSubject, 'mutable');
@@ -264,7 +261,10 @@ it('timestamps a computation after it acquires the serialization lock', function
     }
 
     fclose($sockets[1]);
-    fread($sockets[0], 1);
+    $connection = DB::connection('testing');
+    $connection->beginTransaction();
+    app(ScoreComputationLock::class)->acquire($connection, $key);
+    fwrite($sockets[0], 'g');
     fclose($sockets[0]);
     usleep(1_200_000);
     $releasedAt = CarbonImmutable::now('UTC')->startOfSecond();
