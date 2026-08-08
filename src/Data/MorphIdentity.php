@@ -56,4 +56,9 @@ final readonly class MorphIdentity
 
         return $model->newQuery()->find($this->id);
     }
+
+    public function key(): string
+    {
+        return strlen($this->type).':'.$this->type.$this->id;
+    }
 }

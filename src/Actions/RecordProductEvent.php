@@ -14,13 +14,16 @@ use Illuminate\Contracts\Events\Dispatcher;
 
 final readonly class RecordProductEvent
 {
-    public function __construct(private Dispatcher $dispatcher) {}
+    public function __construct(
+        private Dispatcher $dispatcher,
+        private RecordOnboardingProgress $onboarding,
+    ) {}
 
     public function handle(ProductEventData $event): void
     {
         $connection = (new ProductEventRecord)->getConnection();
 
-        [$record, $milestone] = $connection->transaction(function () use ($event): array {
+        [$record, $milestone, $milestoneWasInserted] = $connection->transaction(function () use ($event): array {
             $occurredAt = CarbonImmutable::parse($event->occurredAt, 'UTC');
             $record = ProductEventRecord::query()->create([
                 ...$event->identityAttributes(),
@@ -30,21 +33,26 @@ final readonly class RecordProductEvent
                 'occurred_at' => $occurredAt,
             ]);
 
-            $milestone = $event->milestone
+            [$milestone, $milestoneWasInserted] = $event->milestone
                 ? $this->insertMilestone($event, $occurredAt)
-                : null;
+                : [null, false];
 
-            return [$record, $milestone];
+            return [$record, $milestone, $milestoneWasInserted];
         });
+
+        if ($milestone !== null) {
+            $this->onboarding->afterCommit($milestone, $milestoneWasInserted);
+        }
 
         $this->dispatcher->dispatch(new ProductEventRecorded($record));
 
-        if ($milestone !== null) {
+        if ($milestone !== null && $milestoneWasInserted) {
             $this->dispatcher->dispatch(new MilestoneReached($milestone));
         }
     }
 
-    private function insertMilestone(ProductEventData $event, CarbonImmutable $occurredAt): ?Milestone
+    /** @return array{Milestone, bool} */
+    private function insertMilestone(ProductEventData $event, CarbonImmutable $occurredAt): array
     {
         $attributes = [
             ...$event->identityAttributes(),
@@ -53,14 +61,14 @@ final readonly class RecordProductEvent
             'created_at' => now('UTC'),
         ];
 
-        if (Milestone::query()->insertOrIgnore($attributes) !== 1) {
-            return null;
-        }
+        $inserted = Milestone::query()->insertOrIgnore($attributes) === 1;
 
-        return Milestone::query()
+        $milestone = Milestone::query()
             ->where('subject_type', $event->subjectType)
             ->where('subject_id', $event->subjectId)
             ->where('name', $event->name)
             ->sole();
+
+        return [$milestone, $inserted];
     }
 }

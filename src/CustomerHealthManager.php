@@ -14,7 +14,10 @@ use ByRcsc\LaravelCustomerHealth\Models\Milestone;
 use ByRcsc\LaravelCustomerHealth\Models\ProductEventRecord;
 use ByRcsc\LaravelCustomerHealth\Queries\FeatureUsageQuery;
 use ByRcsc\LaravelCustomerHealth\Queries\InactiveSubjectsQuery;
+use ByRcsc\LaravelCustomerHealth\Queries\StalledOnboardingQuery;
+use ByRcsc\LaravelCustomerHealth\Registry\ChecklistRegistry;
 use ByRcsc\LaravelCustomerHealth\Registry\EventRegistry;
+use ByRcsc\LaravelCustomerHealth\ValueObjects\Progress;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Config\Repository;
@@ -26,6 +29,7 @@ final readonly class CustomerHealthManager
         private RecordProductEvent $recordProductEvent,
         private Dispatcher $bus,
         private Repository $config,
+        private ChecklistRegistry $checklists,
     ) {}
 
     public function track(ProductEvent $event): void
@@ -98,6 +102,31 @@ final readonly class CustomerHealthManager
     public function inactive(int $days): InactiveSubjectsQuery
     {
         return new InactiveSubjectsQuery($days);
+    }
+
+    public function onboarding(Trackable $subject, ?string $checklist = null): Progress
+    {
+        $identity = MorphIdentity::from($subject, 'subject');
+        $definition = $this->checklists->resolve($checklist);
+        $steps = $definition->steps();
+        $names = $definition->stepNames();
+        $rows = Milestone::query()->where('subject_type', $identity->type)
+            ->where('subject_id', $identity->id)->whereIn('name', $names)->get()->keyBy('name');
+        $completed = [];
+
+        foreach ($steps as $step) {
+            $row = $rows->get($step::name());
+            if ($row instanceof Milestone) {
+                $completed[$step] = $row->occurred_at;
+            }
+        }
+
+        return new Progress($steps, $completed);
+    }
+
+    public function stalledInOnboarding(int $days): StalledOnboardingQuery
+    {
+        return new StalledOnboardingQuery($days, $this->checklists);
     }
 
     private function configString(string $key): ?string

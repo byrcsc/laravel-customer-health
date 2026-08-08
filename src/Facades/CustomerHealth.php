@@ -9,6 +9,8 @@ use ByRcsc\LaravelCustomerHealth\CustomerHealthManager;
 use ByRcsc\LaravelCustomerHealth\Events\ProductEvent;
 use ByRcsc\LaravelCustomerHealth\Queries\FeatureUsageQuery;
 use ByRcsc\LaravelCustomerHealth\Queries\InactiveSubjectsQuery;
+use ByRcsc\LaravelCustomerHealth\Queries\StalledOnboardingQuery;
+use ByRcsc\LaravelCustomerHealth\ValueObjects\Progress;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Facade;
 
@@ -19,6 +21,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static FeatureUsageQuery featureUsage(string $feature)
  * @method static CarbonImmutable|null lastSeen(Trackable $subject)
  * @method static InactiveSubjectsQuery inactive(int $days)
+ * @method static Progress onboarding(Trackable $subject, ?string $checklist = null)
+ * @method static StalledOnboardingQuery stalledInOnboarding(int $days)
  *
  * @see CustomerHealthManager
  */

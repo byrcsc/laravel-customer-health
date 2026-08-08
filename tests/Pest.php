@@ -39,6 +39,7 @@ function dropCustomerHealthStorage(string $connection): void
 
     foreach ([
         'milestone_dispatches',
+        'onboarding_dispatches',
         'tenant_product_milestones',
         TableNames::default('milestones'),
         'tenant_product_events',
