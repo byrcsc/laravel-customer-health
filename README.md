@@ -74,6 +74,80 @@ Schedule::command('customer-health:recompute')->daily();
   table on a configurable connection, so "show me every at-risk customer" is
   one query even when raw events live in per-tenant databases.
 
+## Public API
+
+The entries below are the compatibility surface for `1.x`. Method signatures,
+event properties, command arguments and options, and config keys are locked by
+the test suite. Model records are readable; write through the facade so
+milestones, score history, summaries, and fired events stay consistent.
+
+<!-- public-api:start -->
+- `Events\ProductEvent`
+- `Onboarding\Checklist`
+- `Scoring\HealthScore`
+- `Contracts\Trackable`
+- `Scoring\Signal`
+- `Scoring\WindowedSignal`
+- `Contracts\TenantResolver`
+- `Tenancy\SpatieTenantResolver`
+- `Concerns\TracksCustomerHealth`
+- `Scoring\Signals\RecentActivity`
+- `Scoring\Signals\FeatureAdopted`
+- `Scoring\Signals\FeatureActivity`
+- `Scoring\Signals\DistinctActors`
+- `Scoring\Signals\OnboardingProgress`
+- `Facades\CustomerHealth::track`
+- `Facades\CustomerHealth::hasAdopted`
+- `Facades\CustomerHealth::featureUsage`
+- `Facades\CustomerHealth::lastSeen`
+- `Facades\CustomerHealth::inactive`
+- `Facades\CustomerHealth::features`
+- `Facades\CustomerHealth::onboarding`
+- `Facades\CustomerHealth::stalledInOnboarding`
+- `Facades\CustomerHealth::compute`
+- `Facades\CustomerHealth::score`
+- `Facades\CustomerHealth::scoreHistory`
+- `Facades\CustomerHealth::inState`
+- `Facades\CustomerHealth::summaries`
+- `Facades\CustomerHealth::purge`
+- `ValueObjects\FeatureUsage`
+- `ValueObjects\Progress`
+- `ValueObjects\ScoreResult`
+- `Events\ProductEventRecorded::$record`
+- `Events\MilestoneReached::$milestone`
+- `Events\OnboardingStepCompleted::$milestone`
+- `Events\OnboardingStepCompleted::$checklist`
+- `Events\OnboardingStepCompleted::$step`
+- `Events\OnboardingCompleted::$milestone`
+- `Events\OnboardingCompleted::$checklist`
+- `Events\HealthScoreComputed::$record`
+- `Events\HealthScoreComputed::$result`
+- `Events\HealthStateChanged::$record`
+- `Events\HealthStateChanged::$from`
+- `Events\HealthStateChanged::$to`
+- `Exceptions\UnregisteredEventException`
+- `customer-health:recompute {--score=} {--subject=} {--chunk=500}`
+- `customer-health:purge {subject_type} {subject_id} {--tenant=}`
+- `customer-health.table_names.events`
+- `customer-health.table_names.milestones`
+- `customer-health.table_names.scores`
+- `customer-health.table_names.summaries`
+- `customer-health.connection`
+- `customer-health.summary_connection`
+- `customer-health.events`
+- `customer-health.checklists`
+- `customer-health.scores`
+- `customer-health.tenant_resolver`
+- `customer-health.retention_days`
+- `customer-health.queue`
+- `customer-health.queue_connection`
+- `customer-health.queue_name`
+- `Models\ProductEventRecord`
+- `Models\Milestone`
+- `Models\HealthScoreRecord`
+- `Models\HealthSummary`
+<!-- public-api:end -->
+
 ## Quick start
 
 Declare a product event where your domain already knows it happened:
@@ -283,10 +357,9 @@ cannot know whether the business event itself was delivered twice. Milestone
 rows remain exactly once through their database unique constraint.
 
 Spatie v4 makes queued jobs tenant-aware by default. Keep
-`queues_are_tenant_aware_by_default` enabled (or explicitly list the package's
-`Jobs\RecordProductEvent` job under `tenant_aware_jobs`). The compatibility
-test dispatches through a central database queue, clears the current tenant,
-and runs a worker to prove each write lands in the originating tenant database.
+`queues_are_tenant_aware_by_default` enabled. The compatibility test dispatches
+through a central database queue, clears the current tenant, and runs a worker
+to prove each write lands in the originating tenant database.
 
 ## Troubleshooting
 
