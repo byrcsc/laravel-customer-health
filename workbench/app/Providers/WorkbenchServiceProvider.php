@@ -15,7 +15,13 @@ final class WorkbenchServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        if (! $this->app->environment('workbench')) {
+            return;
+        }
+
+        foreach (['database', 'multitenancy', 'customer-health'] as $key) {
+            $this->app->make('config')->set($key, require __DIR__."/../../config/{$key}.php");
+        }
     }
 
     public function boot(): void

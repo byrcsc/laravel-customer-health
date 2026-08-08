@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ByRcsc\LaravelCustomerHealth;
 
+use ByRcsc\LaravelCustomerHealth\Commands\PurgeCustomerHealthCommand;
 use ByRcsc\LaravelCustomerHealth\Commands\RecomputeHealthScoresCommand;
 use ByRcsc\LaravelCustomerHealth\Events\ProductEvent;
 use ByRcsc\LaravelCustomerHealth\Onboarding\Checklist;
@@ -62,6 +63,9 @@ final class CustomerHealthServiceProvider extends PackageServiceProvider
                 'create_customer_health_scores_table',
                 'create_customer_health_summaries_table',
             ])
-            ->hasCommand(RecomputeHealthScoresCommand::class);
+            ->hasCommands([
+                RecomputeHealthScoresCommand::class,
+                PurgeCustomerHealthCommand::class,
+            ]);
     }
 }

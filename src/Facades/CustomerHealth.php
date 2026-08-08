@@ -32,6 +32,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static Collection<int, ScoreResult> scoreHistory(Trackable $subject, ?string $score = null)
  * @method static Builder<HealthSummary> summaries()
  * @method static Builder<HealthSummary> inState(string $state, ?string $score = null)
+ * @method static void purge(Trackable $subject)
  *
  * @see CustomerHealthManager
  */

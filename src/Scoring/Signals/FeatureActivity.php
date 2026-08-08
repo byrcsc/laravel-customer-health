@@ -6,9 +6,9 @@ namespace ByRcsc\LaravelCustomerHealth\Scoring\Signals;
 
 use ByRcsc\LaravelCustomerHealth\Contracts\Trackable;
 use ByRcsc\LaravelCustomerHealth\Facades\CustomerHealth;
-use ByRcsc\LaravelCustomerHealth\Scoring\Signal;
+use ByRcsc\LaravelCustomerHealth\Scoring\WindowedSignal;
 
-final readonly class FeatureActivity implements Signal
+final readonly class FeatureActivity implements WindowedSignal
 {
     public function __construct(public string $feature, public int $days, public float $weight) {}
 
@@ -20,5 +20,10 @@ final readonly class FeatureActivity implements Signal
     public function weight(): float
     {
         return $this->weight;
+    }
+
+    public function windowDays(): int
+    {
+        return $this->days;
     }
 }

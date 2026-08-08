@@ -1,0 +1,66 @@
+name: Multitenancy compatibility
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.php'
+      - '**.php.stub'
+      - 'composer.json'
+      - '.github/workflows/multitenancy.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**.php'
+      - '**.php.stub'
+      - 'composer.json'
+      - '.github/workflows/multitenancy.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  spatie-multitenancy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: secret
+          MYSQL_DATABASE: customer_health_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql
+          coverage: none
+
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v4
+
+      - name: Exercise tenant databases and landlord summaries
+        run: vendor/bin/pest tests/Compatibility/SpatieMultitenancyTest.php --ci
+        env:
+          DB_DRIVER: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: customer_health_test
+          DB_USERNAME: root
+          DB_PASSWORD: secret

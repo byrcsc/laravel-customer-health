@@ -21,11 +21,17 @@ backported, and neither are ordinary bug fixes. Only the current major receives
 either; when a new major is released, the previous one stops receiving fixes.
 Keep your dependency constraint current.
 
-## What this package does and does not protect
+## Trust boundary and data control
 
 This package records what customers do and scores them on it. That makes it a
 data-retention component more than an access-control one, so the boundary is
 mostly about where customer data goes and how completely it can be removed.
+The consuming application is the data controller: the package stores the
+subject, actor, timestamps, and properties the application passes to it.
+Properties may contain personal data, and the application is responsible for
+lawful collection, minimization, access control, retention, and coordinating
+deletion in backups or downstream systems. `CustomerHealth::purge($subject)`
+and `customer-health:purge` are the package's erasure mechanisms.
 
 It **does**:
 
