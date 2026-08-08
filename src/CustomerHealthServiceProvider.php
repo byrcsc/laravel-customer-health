@@ -17,6 +17,9 @@ final class CustomerHealthServiceProvider extends PackageServiceProvider
         $package
             ->name('laravel-customer-health')
             ->hasConfigFile()
-            ->hasMigrations();
+            ->hasMigrations([
+                'create_customer_health_events_table',
+                'create_customer_health_milestones_table',
+            ]);
     }
 }
