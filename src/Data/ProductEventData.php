@@ -6,9 +6,7 @@ namespace ByRcsc\LaravelCustomerHealth\Data;
 
 use ByRcsc\LaravelCustomerHealth\Events\ProductEvent;
 use ByRcsc\LaravelCustomerHealth\Exceptions\InvalidEventPropertiesException;
-use ByRcsc\LaravelCustomerHealth\Exceptions\InvalidTrackableException;
 use ByRcsc\LaravelCustomerHealth\Registry\EventRegistry;
-use Illuminate\Database\Eloquent\Model;
 
 final readonly class ProductEventData
 {
@@ -29,15 +27,15 @@ final readonly class ProductEventData
 
     public static function from(ProductEvent $event, EventRegistry $events): self
     {
-        $subject = self::modelFor($event->subject, 'subject');
-        $actor = $event->actor === null ? null : self::modelFor($event->actor, 'actor');
+        $subject = MorphIdentity::from($event->subject, 'subject');
+        $actor = $event->actor === null ? null : MorphIdentity::from($event->actor, 'actor');
         self::ensurePrimitive($event->properties);
 
         return new self(
-            subjectType: self::morphTypeFor($subject),
-            subjectId: self::keyFor($subject),
-            actorType: $actor === null ? null : self::morphTypeFor($actor),
-            actorId: $actor === null ? null : self::keyFor($actor),
+            subjectType: $subject->type,
+            subjectId: $subject->id,
+            actorType: $actor?->type,
+            actorId: $actor?->id,
             name: $events->nameFor($event::class),
             feature: $event::$feature,
             milestone: $event::$milestone,
@@ -57,41 +55,6 @@ final readonly class ProductEventData
             'actor_type' => $this->actorType,
             'actor_id' => $this->actorId,
         ];
-    }
-
-    private static function modelFor(object $value, string $role): Model
-    {
-        if (! $value instanceof Model) {
-            throw InvalidTrackableException::notEloquent($role);
-        }
-
-        if ($value->getKey() === null) {
-            throw InvalidTrackableException::notPersisted($role);
-        }
-
-        return $value;
-    }
-
-    private static function morphTypeFor(Model $model): string
-    {
-        $morphType = $model->getMorphClass();
-
-        if ($morphType === '') {
-            throw InvalidTrackableException::invalidMorphType();
-        }
-
-        return $morphType;
-    }
-
-    private static function keyFor(Model $model): string
-    {
-        $key = $model->getKey();
-
-        if (! is_int($key) && ! is_string($key)) {
-            throw InvalidTrackableException::invalidKey();
-        }
-
-        return (string) $key;
     }
 
     private static function ensurePrimitive(mixed $value, string $path = 'properties'): void

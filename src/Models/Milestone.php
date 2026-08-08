@@ -14,6 +14,11 @@ use Illuminate\Database\Eloquent\Model;
  * events through CustomerHealth::track() so uniqueness and events stay in
  * sync.
  *
+ * @property string $subject_type
+ * @property string $subject_id
+ * @property string $name
+ * @property string|null $actor_type
+ * @property string|null $actor_id
  * @property CarbonImmutable $occurred_at
  * @property-read Model $subject
  * @property-read Model|null $actor

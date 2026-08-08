@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace ByRcsc\LaravelCustomerHealth;
 
 use ByRcsc\LaravelCustomerHealth\Events\ProductEvent;
+use ByRcsc\LaravelCustomerHealth\Onboarding\Checklist;
+use ByRcsc\LaravelCustomerHealth\Registry\ChecklistRegistry;
 use ByRcsc\LaravelCustomerHealth\Registry\EventRegistry;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
@@ -28,6 +30,14 @@ final class CustomerHealthServiceProvider extends PackageServiceProvider
         });
 
         $this->app->singleton(CustomerHealthManager::class);
+        $this->app->singleton(ChecklistRegistry::class, function (Application $app): ChecklistRegistry {
+            $config = $app->make(Repository::class);
+            $configured = $config->get('customer-health.checklists', []);
+            /** @var list<class-string<Checklist>> $classes */
+            $classes = is_array($configured) ? array_values($configured) : [];
+
+            return new ChecklistRegistry($classes, $app->make(EventRegistry::class));
+        });
     }
 
     public function configurePackage(Package $package): void

@@ -28,6 +28,7 @@ return new class extends Migration
                     ['subject_type', 'subject_id', 'name'],
                     'ch_milestones_subject_name_unique',
                 );
+                $table->index(['name', 'occurred_at'], 'ch_milestones_name_time_idx');
             });
     }
 

@@ -73,7 +73,10 @@ it('creates the events and milestones schema with the required indexes', functio
             'ch_events_name_time_idx',
             'ch_events_feature_time_idx',
         )
-        ->and($milestoneIndexes)->toContain('ch_milestones_subject_name_unique');
+        ->and($milestoneIndexes)->toContain(
+            'ch_milestones_subject_name_unique',
+            'ch_milestones_name_time_idx',
+        );
 });
 
 it('enforces one milestone per subject and event name', function (): void {
