@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ByRcsc\LaravelCustomerHealth;
 
+use ByRcsc\LaravelCustomerHealth\Commands\RecomputeHealthScoresCommand;
 use ByRcsc\LaravelCustomerHealth\Events\ProductEvent;
 use ByRcsc\LaravelCustomerHealth\Onboarding\Checklist;
 use ByRcsc\LaravelCustomerHealth\Registry\ChecklistRegistry;
@@ -59,6 +60,7 @@ final class CustomerHealthServiceProvider extends PackageServiceProvider
                 'create_customer_health_events_table',
                 'create_customer_health_milestones_table',
                 'create_customer_health_scores_table',
-            ]);
+            ])
+            ->hasCommand(RecomputeHealthScoresCommand::class);
     }
 }

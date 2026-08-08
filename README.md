@@ -241,6 +241,16 @@ In a multi-tenant app, make the queue tenant-aware as described in the
 spatie/laravel-multitenancy documentation so queued writes land in the right
 tenant database.
 
+## Troubleshooting
+
+### Scores are never computed
+
+Confirm `customer-health:recompute` is scheduled and that Laravel's scheduler
+is running. Tracking an event does not compute a score in v1; the scheduled
+command is deliberately what notices both new activity and customers going
+quiet. Run `php artisan customer-health:recompute` manually to verify the
+registered score definitions and inspect any per-subject failures.
+
 ## Retention and privacy
 
 Raw events can be pruned without losing lifetime facts. Milestones, scores,
