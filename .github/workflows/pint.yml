@@ -1,0 +1,46 @@
+name: Pint
+
+on:
+  # `main` only: push and pull_request carry different refs, so a branch with
+  # an open pull request would run this twice.
+  push:
+    branches: [main]
+    paths:
+      - '**.php'
+      - 'pint.json'
+      - 'composer.json'
+      - '.github/workflows/pint.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**.php'
+      - 'pint.json'
+      - 'composer.json'
+      - '.github/workflows/pint.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  pint:
+    name: pint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v4
+
+      - name: Check formatting
+        run: ./vendor/bin/pint --test

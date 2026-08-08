@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use ByRcsc\LaravelCustomerHealth\Support\TableNames;
+
 return [
 
     /*
@@ -16,12 +18,7 @@ return [
     |
     */
 
-    'table_names' => [
-        'events' => 'customer_health_events',
-        'milestones' => 'customer_health_milestones',
-        'scores' => 'customer_health_scores',
-        'summaries' => 'customer_health_summaries',
-    ],
+    'table_names' => TableNames::defaults(),
 
     /*
     |--------------------------------------------------------------------------
