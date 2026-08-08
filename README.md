@@ -207,19 +207,62 @@ The core is tenancy-agnostic: events, milestones, and scores are written to
 a configurable connection (the current default connection by default), which
 is exactly what database-per-tenant packages switch for you.
 
-For `spatie/laravel-multitenancy` with one database per tenant:
+For `spatie/laravel-multitenancy` v4 with one database per tenant, install the
+optional integration and publish Spatie's configuration:
+
+```bash
+composer require spatie/laravel-multitenancy
+php artisan vendor:publish --tag="multitenancy-config"
+```
+
+Configure separate named connections. The `tenant` connection starts without
+a database because Spatie fills it from the current tenant's `database`
+attribute:
+
+```php
+// config/database.php
+'connections' => [
+    'landlord' => [/* driver, host, database, credentials, ... */],
+    'tenant' => [/* same server settings, but 'database' => null */],
+],
+```
+
+```php
+// config/multitenancy.php
+'tenant_model' => App\Models\Tenant::class,
+'switch_tenant_tasks' => [
+    Spatie\Multitenancy\Tasks\SwitchTenantDatabaseTask::class,
+],
+'tenant_database_connection_name' => 'tenant',
+'landlord_database_connection_name' => 'landlord',
+'queues_are_tenant_aware_by_default' => true,
+```
+
+Point package history at the switched connection and compact summaries at the
+landlord. The optional resolver is safe to reference only when Spatie is
+installed:
+
+```php
+// config/customer-health.php
+'connection' => 'tenant',
+'summary_connection' => 'landlord',
+'tenant_resolver' => ByRcsc\LaravelCustomerHealth\Tenancy\SpatieTenantResolver::class,
+```
+
+Then split the published package migrations by storage role:
 
 - Include the package migrations in your tenant migrations path; the
-  summaries migration is a separate published file and runs on
-  `summary_connection`, so multi-database apps can run only that file for the
-  landlord while the other package migrations run per tenant.
-- Run the recompute per tenant: `php artisan tenants:artisan
-  customer-health:recompute`.
+  events, milestones, and scores migrations run for every tenant. Run only the
+  summaries migration on the landlord connection.
+- Run recomputation per tenant: `php artisan tenants:artisan
+  "customer-health:recompute"`.
 - Summaries carry the current tenant, so the landlord can answer "which
   customers are at risk" across every tenant database with one query.
 
-This setup is exercised in CI. Single-database apps need none of it: leave
-the connections at their defaults and everything lives in one database.
+The repository workbench contains the exact connection, multitenancy, package,
+tenant-model, and tenant-subject configuration shown above. CI exercises the
+full flow against MySQL with two tenant databases. Single-database apps need
+none of it: leave the connections and resolver at their defaults.
 
 ## Queued writes
 
@@ -239,9 +282,11 @@ Queue retries intentionally write another raw event because the package
 cannot know whether the business event itself was delivered twice. Milestone
 rows remain exactly once through their database unique constraint.
 
-In a multi-tenant app, make the queue tenant-aware as described in the
-spatie/laravel-multitenancy documentation so queued writes land in the right
-tenant database.
+Spatie v4 makes queued jobs tenant-aware by default. Keep
+`queues_are_tenant_aware_by_default` enabled (or explicitly list the package's
+`Jobs\RecordProductEvent` job under `tenant_aware_jobs`). The compatibility
+test dispatches through a central database queue, clears the current tenant,
+and runs a worker to prove each write lands in the originating tenant database.
 
 ## Troubleshooting
 

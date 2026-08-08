@@ -6,6 +6,7 @@ namespace ByRcsc\LaravelCustomerHealth\Tests;
 
 use ByRcsc\LaravelCustomerHealth\CustomerHealthServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
+use Spatie\Multitenancy\MultitenancyServiceProvider;
 
 abstract class TestCase extends Orchestra
 {
@@ -14,7 +15,7 @@ abstract class TestCase extends Orchestra
      */
     protected function getPackageProviders($app): array
     {
-        return [CustomerHealthServiceProvider::class];
+        return [MultitenancyServiceProvider::class, CustomerHealthServiceProvider::class];
     }
 
     protected function defineEnvironment($app): void

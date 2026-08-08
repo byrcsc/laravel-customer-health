@@ -27,7 +27,9 @@ workbench:
     # The vendor-publish step for the package migrations joins here with
     # issue A2, once there are migrations to publish; the demo then installs
     # them exactly as a real application does.
-    - migrate-fresh
+    - migrate-fresh:
+        --seed: true
+        --seeder: Workbench\Database\Seeders\DatabaseSeeder
 
 # Environment lives in `workbench/.env`, which Testbench copies into the
 # skeleton on every run. Keeping it there rather than in an `env:` block below

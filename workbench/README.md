@@ -9,7 +9,17 @@ composer build
 
 This creates the SQLite database and migrates.
 
-The demo scenario — a multi-tenant app tracking product events, onboarding,
-and health scores across two tenant databases — lands with issue E2 once the
-core exists. Until then this app is the empty shell that proves the scaffold
-boots.
+The workbench is configured as a database-per-tenant Spatie v4 application:
+
+- `landlord` is the default SQLite connection and stores tenants and customer
+  health summaries.
+- `tenant` starts with a null database; `SwitchTenantDatabaseTask` selects the
+  current tenant's SQLite file.
+- `Workbench\App\Models\Tenant` is the landlord tenant model.
+- `Workbench\App\Models\Team` is a trackable model on the tenant connection.
+- package events, milestones, and scores belong in the tenant migrations path;
+  the summaries migration belongs in the landlord migrations path.
+
+The executable two-tenant flow lives in
+`tests/Compatibility/SpatieMultitenancyTest.php` and runs against MySQL in its
+own CI job. The seeded interactive demo lands with issue E2.
