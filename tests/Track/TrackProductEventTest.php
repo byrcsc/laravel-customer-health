@@ -17,61 +17,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
 
-/** @return Closure(): void */
-function configureTrackTenantDatabase(): Closure
-{
-    /** @var array<string, mixed> $connection */
-    $connection = config('database.connections.testing');
-    $driver = $connection['driver'] ?? 'sqlite';
-
-    if ($driver === 'sqlite') {
-        config()->set('database.connections.tenant', [
-            'driver' => 'sqlite',
-            'database' => ':memory:',
-            'prefix' => '',
-        ]);
-
-        return function (): void {
-            DB::purge('tenant');
-            config()->set('database.connections.tenant');
-        };
-    }
-
-    $database = 'customer_health_switch_test';
-    $databaseConnection = DB::connection('testing');
-
-    if ($driver === 'mysql') {
-        $databaseConnection->unprepared("DROP DATABASE IF EXISTS `{$database}`");
-        $databaseConnection->unprepared("CREATE DATABASE `{$database}`");
-    } else {
-        $databaseConnection->statement(
-            'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ? AND pid <> pg_backend_pid()',
-            [$database],
-        );
-        $databaseConnection->unprepared("DROP DATABASE IF EXISTS \"{$database}\"");
-        $databaseConnection->unprepared("CREATE DATABASE \"{$database}\"");
-    }
-
-    $connection['database'] = $database;
-    config()->set('database.connections.tenant', $connection);
-
-    return function () use ($database, $databaseConnection, $driver): void {
-        DB::purge('tenant');
-
-        if ($driver === 'mysql') {
-            $databaseConnection->unprepared("DROP DATABASE IF EXISTS `{$database}`");
-        } else {
-            $databaseConnection->statement(
-                'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ? AND pid <> pg_backend_pid()',
-                [$database],
-            );
-            $databaseConnection->unprepared("DROP DATABASE IF EXISTS \"{$database}\"");
-        }
-
-        config()->set('database.connections.tenant');
-    };
-}
-
 beforeEach(function (): void {
     dropCustomerHealthStorage('testing');
     runCustomerHealthStorageMigrations();
@@ -231,7 +176,7 @@ it('records system events with no actor', function (): void {
 });
 
 it('follows the active default connection between track calls', function (): void {
-    $cleanup = configureTrackTenantDatabase();
+    $cleanup = configureCustomerHealthTenantDatabase();
 
     try {
         $subject = TestSubject::query()->create(['name' => 'Default']);
@@ -254,7 +199,7 @@ it('follows the active default connection between track calls', function (): voi
 });
 
 it('writes the event and milestone transaction to the configured connection', function (): void {
-    $cleanup = configureTrackTenantDatabase();
+    $cleanup = configureCustomerHealthTenantDatabase();
 
     try {
         config()->set('customer-health.connection', 'tenant');

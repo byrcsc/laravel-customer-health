@@ -222,6 +222,15 @@ High-traffic apps can switch to queued writes:
 'queue' => true,
 ```
 
+The default is synchronous, so the quick start records its first event
+without a queue worker. Once queued writes are enabled, a running worker is
+required. The queue connection and name can be selected with
+`queue_connection` and `queue_name`; null uses the application's defaults.
+
+Queue retries intentionally write another raw event because the package
+cannot know whether the business event itself was delivered twice. Milestone
+rows remain exactly once through their database unique constraint.
+
 In a multi-tenant app, make the queue tenant-aware as described in the
 spatie/laravel-multitenancy documentation so queued writes land in the right
 tenant database.
