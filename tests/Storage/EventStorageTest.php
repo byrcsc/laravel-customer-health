@@ -151,8 +151,8 @@ it('stores and hydrates occurred at in UTC when the application is not UTC', fun
 
         expect(DB::table(TableNames::events())->value('occurred_at'))
             ->toStartWith('2026-08-08 00:00:00')
-            ->and($event->fresh()?->occurred_at->format('Y-m-d H:i:s e'))
-            ->toBe('2026-08-08 00:00:00 UTC');
+            ->and($event->fresh()?->occurred_at->format('Y-m-d H:i:s P'))
+            ->toBe('2026-08-08 00:00:00 +00:00');
     } finally {
         date_default_timezone_set($originalTimezone);
     }

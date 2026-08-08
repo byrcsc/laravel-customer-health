@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Queue;
 
 function queuedProductEvent(): RecordProductEvent
 {
-    Queue::assertPushedOnce(RecordProductEvent::class);
+    Queue::assertPushed(RecordProductEvent::class, 1);
     $job = Queue::pushed(RecordProductEvent::class)->first();
 
     if (! $job instanceof RecordProductEvent) {

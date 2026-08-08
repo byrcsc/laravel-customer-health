@@ -59,7 +59,7 @@ it('records a product event with an actor and reaches a milestone once', functio
         ->and($record->name)->toBe('workflow_created')
         ->and($record->feature)->toBe('workflows')
         ->and($record->properties)->toBe(['template' => 'approval'])
-        ->and($record->occurred_at->format('Y-m-d H:i:s e'))->toBe('2026-08-08 00:00:00 UTC')
+        ->and($record->occurred_at->format('Y-m-d H:i:s P'))->toBe('2026-08-08 00:00:00 +00:00')
         ->and($milestone->name)->toBe('workflow_created');
 
     Event::assertDispatched(ProductEventRecorded::class, fn (ProductEventRecorded $event): bool => $event->record->is($record));
