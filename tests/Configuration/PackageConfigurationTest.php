@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use ByRcsc\LaravelCustomerHealth\CustomerHealthServiceProvider;
 use ByRcsc\LaravelCustomerHealth\Support\TableNames;
+use ByRcsc\LaravelCustomerHealth\Tenancy\NullTenantResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 
@@ -15,7 +16,9 @@ it('loads the config defaults', function (): void {
         'summaries' => 'customer_health_summaries',
     ])
         ->and(config('customer-health.connection'))->toBeNull()
-        ->and(config('customer-health.summary_connection'))->toBeNull();
+        ->and(config('customer-health.summary_connection'))->toBeNull()
+        ->and(config('customer-health.scores'))->toBe([])
+        ->and(config('customer-health.tenant_resolver'))->toBe(NullTenantResolver::class);
 });
 
 // The shipped config and TableNames::DEFAULTS name the same tables on

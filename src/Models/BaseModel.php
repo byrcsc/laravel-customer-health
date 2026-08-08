@@ -9,10 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Every package model resolves its table through `TableNames` and its
- * connection through `config('customer-health.connection')`, so renaming a
- * table or pointing the package at another database is a config change, not
- * a code change. Concrete models name their `TableNames` key and nothing
- * else about storage.
+ * configured connection, so renaming a table or moving package storage is a
+ * config change, not a code change. Concrete models name their `TableNames`
+ * key; the summary model only overrides which configured connection it uses.
  */
 abstract class BaseModel extends Model
 {
@@ -40,9 +39,13 @@ abstract class BaseModel extends Model
             return $instance;
         }
 
-        /** @var mixed $configured */
-        $configured = config('customer-health.connection');
+        $configured = $this->configuredConnection();
 
         return is_string($configured) && $configured !== '' ? $configured : null;
+    }
+
+    protected function configuredConnection(): mixed
+    {
+        return config('customer-health.connection');
     }
 }

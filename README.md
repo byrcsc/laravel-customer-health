@@ -190,10 +190,16 @@ class NotifyCustomerSuccess
 Read the results anywhere:
 
 ```php
+CustomerHealth::compute($team);          // evaluate now and append history
 CustomerHealth::score($team);            // current value, state, per-signal breakdown
 CustomerHealth::scoreHistory($team);     // how it moved
 CustomerHealth::inState('at_risk')->get(); // one query across all customers
 ```
+
+`RecentActivity`, `FeatureActivity`, and `DistinctActors` are presence
+signals: they return 100 when matching activity exists inside their inclusive
+UTC window and 0 otherwise. Use a custom `Signal` when a count-based target is
+part of your product's health definition.
 
 ## Multi-tenancy
 
@@ -204,7 +210,9 @@ is exactly what database-per-tenant packages switch for you.
 For `spatie/laravel-multitenancy` with one database per tenant:
 
 - Include the package migrations in your tenant migrations path; the
-  summaries migration runs on the landlord connection.
+  summaries migration is a separate published file and runs on
+  `summary_connection`, so multi-database apps can run only that file for the
+  landlord while the other package migrations run per tenant.
 - Run the recompute per tenant: `php artisan tenants:artisan
   customer-health:recompute`.
 - Summaries carry the current tenant, so the landlord can answer "which
@@ -234,6 +242,16 @@ rows remain exactly once through their database unique constraint.
 In a multi-tenant app, make the queue tenant-aware as described in the
 spatie/laravel-multitenancy documentation so queued writes land in the right
 tenant database.
+
+## Troubleshooting
+
+### Scores are never computed
+
+Confirm `customer-health:recompute` is scheduled and that Laravel's scheduler
+is running. Tracking an event does not compute a score in v1; the scheduled
+command is deliberately what notices both new activity and customers going
+quiet. Run `php artisan customer-health:recompute` manually to verify the
+registered score definitions and inspect any per-subject failures.
 
 ## Retention and privacy
 
