@@ -1,0 +1,134 @@
+name: run-tests
+
+on:
+  # `main` only: push and pull_request carry different refs, so a branch with
+  # an open pull request would run the whole matrix twice.
+  push:
+    branches: [main]
+    paths:
+      - '**.php'
+      - '**.php.stub'
+      - '.github/workflows/run-tests.yml'
+      - 'phpunit.xml.dist'
+      - 'composer.json'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**.php'
+      - '**.php.stub'
+      - '.github/workflows/run-tests.yml'
+      - 'phpunit.xml.dist'
+      - 'composer.json'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Reading the repository is all this workflow needs. Without this it inherits
+# the repository default, which on a new repo can be read/write.
+permissions:
+  contents: read
+
+jobs:
+  # The full compatibility claim in one matrix: every supported Laravel and
+  # PHP version against every supported database engine. SQLite is the
+  # development default; MySQL and PostgreSQL are what SQLite will not tell
+  # the truth about - unique index behaviour, real column types, and JSON
+  # columns. The database services are declared once and simply sit idle on
+  # the SQLite jobs.
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.4', '8.3']
+        laravel: ['13.*', '12.*']
+        database: [sqlite, mysql, pgsql]
+        stability: [prefer-stable, prefer-lowest]
+        include:
+          - laravel: 13.*
+            testbench: 11.*
+          - laravel: 12.*
+            testbench: 10.*
+          - database: mysql
+            port: 3306
+            username: root
+            password: secret
+          - database: pgsql
+            port: 5432
+            username: postgres
+            password: postgres
+        exclude:
+          # prefer-lowest proves the composer.json version floors, which do
+          # not vary by engine; running it on SQLite alone keeps the floor
+          # claim without doubling the server-database jobs.
+          - database: mysql
+            stability: prefer-lowest
+          - database: pgsql
+            stability: prefer-lowest
+
+    name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.database }} - ${{ matrix.stability }}
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: secret
+          MYSQL_DATABASE: customer_health_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      pgsql:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: customer_health_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, fileinfo, sqlite3, pdo_sqlite, pdo_mysql, pdo_pgsql
+          coverage: none
+
+      - name: Setup problem matchers
+        run: |
+          echo "::add-matcher::${{ runner.tool_cache }}/php.json"
+          echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+
+      - name: List Installed Dependencies
+        run: composer show -D
+
+      - name: Audit dependencies for known advisories
+        run: composer audit --no-interaction
+
+      - name: Execute tests
+        run: vendor/bin/pest --ci
+        env:
+          DB_DRIVER: ${{ matrix.database }}
+          DB_HOST: 127.0.0.1
+          DB_PORT: ${{ matrix.port }}
+          DB_DATABASE: customer_health_test
+          DB_USERNAME: ${{ matrix.username }}
+          DB_PASSWORD: ${{ matrix.password }}

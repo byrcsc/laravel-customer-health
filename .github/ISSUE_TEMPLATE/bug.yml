@@ -1,0 +1,112 @@
+name: Bug report
+description: Report a reproducible problem with the package
+title: "[Bug]: "
+labels: ["bug"]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thanks for helping improve Laravel Customer Health. **Remove real customer data before sharing anything.** Event payloads, subject names, and score breakdowns routinely contain it. Replace them with made-up values that still reproduce the problem.
+    - type: textarea
+      id: what-happened
+      attributes:
+          label: What happened?
+          description: Tell us what happened and what you expected instead.
+          placeholder: I expected X, but Y happened.
+      validations:
+          required: true
+    - type: textarea
+      id: how-to-reproduce
+      attributes:
+          label: How to reproduce the bug
+          description: Provide the smallest code sample or sequence of steps that reliably reproduces the problem. The event declaration, the signal or checklist involved, and the order things were tracked is usually the clearest form.
+          placeholder: "1. Declare a product event...\n2. Track it for a subject...\n3. Recompute...\n4. Observe..."
+      validations:
+          required: true
+    - type: dropdown
+      id: area
+      attributes:
+          label: Which area does this affect?
+          options:
+              - Tracking events
+              - Milestones and feature adoption
+              - Onboarding checklists
+              - Health scores and signals
+              - Summaries and querying
+              - Retention, pruning, or purge
+              - Other
+      validations:
+          required: true
+    - type: dropdown
+      id: tenancy
+      attributes:
+          label: What is your tenancy setup?
+          options:
+              - Single database, no tenancy
+              - Database per tenant (spatie/laravel-multitenancy)
+              - Database per tenant (other package)
+              - Single database, multi-tenant by column
+      validations:
+          required: true
+    - type: dropdown
+      id: queued
+      attributes:
+          label: Are writes queued?
+          description: The `queue` config option.
+          options:
+              - "No, direct inserts (default)"
+              - "Yes, queued"
+      validations:
+          required: true
+    - type: input
+      id: package-version
+      attributes:
+          label: Package version
+          description: Which Laravel Customer Health version are you using?
+          placeholder: 1.0.0
+      validations:
+          required: true
+    - type: input
+      id: php-version
+      attributes:
+          label: PHP version
+          description: Which PHP version are you using?
+          placeholder: 8.3.0
+      validations:
+          required: true
+    - type: input
+      id: laravel-version
+      attributes:
+          label: Laravel version
+          description: Which Laravel version are you using?
+          placeholder: 12.0.0
+      validations:
+          required: true
+    - type: dropdown
+      id: database
+      attributes:
+          label: Which database are you using?
+          options:
+              - SQLite
+              - MySQL / MariaDB
+              - PostgreSQL
+              - Other
+      validations:
+          required: true
+    - type: dropdown
+      id: operating-systems
+      attributes:
+          label: Which operating systems does this happen with?
+          description: You may select more than one.
+          multiple: true
+          options:
+              - macOS
+              - Windows
+              - Linux
+    - type: textarea
+      id: notes
+      attributes:
+          label: Notes
+          description: Add any other relevant context, such as the relevant config or stack traces. Scrub customer data first.
+      validations:
+          required: false
