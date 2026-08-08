@@ -12,6 +12,7 @@ use ByRcsc\LaravelCustomerHealth\Exceptions\UnresolvableSubjectException;
 use ByRcsc\LaravelCustomerHealth\Queries\KnownSubjectsQuery;
 use ByRcsc\LaravelCustomerHealth\Registry\HealthScoreRegistry;
 use ByRcsc\LaravelCustomerHealth\Scoring\HealthScore;
+use ByRcsc\LaravelCustomerHealth\Scoring\WindowedSignal;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Throwable;
@@ -36,6 +37,8 @@ final class RecomputeHealthScoresCommand extends Command
 
             return self::FAILURE;
         }
+
+        $this->warnWhenRetentionIsShorterThanScoreWindows($scores);
 
         $subjects = new KnownSubjectsQuery($subjectFilter);
         $this->output->progressStart($subjects->count() * count($definitions));
@@ -78,6 +81,29 @@ final class RecomputeHealthScoresCommand extends Command
         $this->info("Recomputed {$computed} health score(s). {$failureCount} subject(s) failed.");
 
         return $failureCount === 0 ? self::SUCCESS : self::FAILURE;
+    }
+
+    private function warnWhenRetentionIsShorterThanScoreWindows(HealthScoreRegistry $scores): void
+    {
+        $retention = config('customer-health.retention_days');
+        if (! is_int($retention) || $retention < 0) {
+            return;
+        }
+
+        $longestWindow = 0;
+        foreach ($scores->all() as $score) {
+            foreach ($scores->weightedSignals($score) as ['signal' => $signal]) {
+                if ($signal instanceof WindowedSignal) {
+                    $longestWindow = max($longestWindow, $signal->windowDays());
+                }
+            }
+        }
+
+        if ($retention < $longestWindow) {
+            $this->warn(
+                "Raw event retention [{$retention} days] is shorter than the longest registered signal window [{$longestWindow} days]; recomputed activity scores may ignore pruned events.",
+            );
+        }
     }
 
     private function chunkSize(): int

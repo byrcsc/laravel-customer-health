@@ -80,6 +80,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Raw event retention
+    |--------------------------------------------------------------------------
+    |
+    | The number of days raw product events remain queryable. Null keeps them
+    | forever. Milestones, score history, and summaries are never pruned.
+    |
+    */
+
+    'retention_days' => null,
+
+    /*
+    |--------------------------------------------------------------------------
     | Queued writes
     |--------------------------------------------------------------------------
     |

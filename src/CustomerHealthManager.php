@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ByRcsc\LaravelCustomerHealth;
 
 use ByRcsc\LaravelCustomerHealth\Actions\ComputeHealthScore;
+use ByRcsc\LaravelCustomerHealth\Actions\PurgeCustomerHealth;
 use ByRcsc\LaravelCustomerHealth\Actions\RecordProductEvent;
 use ByRcsc\LaravelCustomerHealth\Contracts\Trackable;
 use ByRcsc\LaravelCustomerHealth\Data\MorphIdentity;
@@ -39,6 +40,7 @@ final readonly class CustomerHealthManager
         private ChecklistRegistry $checklists,
         private HealthScoreRegistry $scores,
         private ComputeHealthScore $computeHealthScore,
+        private PurgeCustomerHealth $purgeCustomerHealth,
     ) {}
 
     public function track(ProductEvent $event): void
@@ -176,6 +178,11 @@ final readonly class CustomerHealthManager
         return $this->summaries()
             ->where('state', $state)
             ->where('score', $definition::name());
+    }
+
+    public function purge(Trackable $subject): void
+    {
+        $this->purgeCustomerHealth->handle($subject);
     }
 
     /** @return Builder<HealthScoreRecord> */

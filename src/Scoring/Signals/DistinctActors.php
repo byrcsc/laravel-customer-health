@@ -7,10 +7,10 @@ namespace ByRcsc\LaravelCustomerHealth\Scoring\Signals;
 use ByRcsc\LaravelCustomerHealth\Contracts\Trackable;
 use ByRcsc\LaravelCustomerHealth\Data\MorphIdentity;
 use ByRcsc\LaravelCustomerHealth\Models\ProductEventRecord;
-use ByRcsc\LaravelCustomerHealth\Scoring\Signal;
+use ByRcsc\LaravelCustomerHealth\Scoring\WindowedSignal;
 use Carbon\CarbonImmutable;
 
-final readonly class DistinctActors implements Signal
+final readonly class DistinctActors implements WindowedSignal
 {
     public function __construct(public int $days, public float $weight) {}
 
@@ -30,5 +30,10 @@ final readonly class DistinctActors implements Signal
     public function weight(): float
     {
         return $this->weight;
+    }
+
+    public function windowDays(): int
+    {
+        return $this->days;
     }
 }

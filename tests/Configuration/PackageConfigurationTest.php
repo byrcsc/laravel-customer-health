@@ -17,6 +17,7 @@ it('loads the config defaults', function (): void {
     ])
         ->and(config('customer-health.connection'))->toBeNull()
         ->and(config('customer-health.summary_connection'))->toBeNull()
+        ->and(config('customer-health.retention_days'))->toBeNull()
         ->and(config('customer-health.scores'))->toBe([])
         ->and(config('customer-health.tenant_resolver'))->toBe(NullTenantResolver::class);
 });

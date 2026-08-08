@@ -7,6 +7,8 @@ namespace ByRcsc\LaravelCustomerHealth\Models;
 use ByRcsc\LaravelCustomerHealth\Casts\UtcImmutableDateTime;
 use ByRcsc\LaravelCustomerHealth\Concerns\HasSubjectAndActorRelations;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -21,12 +23,25 @@ use Illuminate\Database\Eloquent\Model;
 final class ProductEventRecord extends BaseModel
 {
     use HasSubjectAndActorRelations;
+    use MassPrunable;
 
     public const UPDATED_AT = null;
 
     protected static function tableKey(): string
     {
         return 'events';
+    }
+
+    /** @return Builder<static> */
+    public function prunable(): Builder
+    {
+        $days = config('customer-health.retention_days');
+
+        if (! is_int($days) || $days < 0) {
+            return self::query()->whereRaw('1 = 0');
+        }
+
+        return self::query()->where('occurred_at', '<', CarbonImmutable::now('UTC')->subDays($days));
     }
 
     /**

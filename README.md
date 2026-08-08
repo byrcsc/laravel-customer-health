@@ -309,8 +309,19 @@ because old events were deleted.
 ```
 
 ```php
-Schedule::command('model:prune')->daily();
+use ByRcsc\LaravelCustomerHealth\Models\ProductEventRecord;
+
+Schedule::command('model:prune', [
+    '--model' => [ProductEventRecord::class],
+])->daily();
 ```
+
+Retention uses each event's UTC `occurred_at` value. Keep `retention_days` at
+least as long as the longest activity window in any registered health score;
+`customer-health:recompute` warns when a built-in or custom `WindowedSignal`
+needs more history than retention preserves. Milestone-based adoption and
+onboarding answers remain stable after pruning, while `RecentActivity`,
+`FeatureActivity`, `DistinctActors`, and other raw-event windows may change.
 
 To erase a customer entirely, for offboarding or a data-deletion request:
 
@@ -319,7 +330,21 @@ php artisan customer-health:purge "App\Models\Team" 42
 ```
 
 or `CustomerHealth::purge($team)` from code. Both remove the subject's
-events, milestones, score history, and summaries.
+events, milestones, score history, and summaries. In a database-per-tenant
+application, run the command inside Spatie's tenant context:
+
+```bash
+php artisan tenants:artisan \
+  'customer-health:purge "App\\Models\\Team" 42' \
+  --tenant=7
+```
+
+The outer `--tenant` selects the tenant database. If the active integration
+cannot resolve the summary tenant id, the inner command also accepts
+`--tenant=7` as a landlord-summary match override. Purges are transactional on
+each connection; no database abstraction can make two separate connections a
+single distributed transaction, so rerun a failed purge before deleting the
+application's subject model.
 
 ## Out of scope
 
