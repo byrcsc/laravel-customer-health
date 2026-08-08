@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace ByRcsc\LaravelCustomerHealth;
 
+use ByRcsc\LaravelCustomerHealth\Actions\ComputeHealthScore;
 use ByRcsc\LaravelCustomerHealth\Actions\RecordProductEvent;
 use ByRcsc\LaravelCustomerHealth\Contracts\Trackable;
 use ByRcsc\LaravelCustomerHealth\Data\MorphIdentity;
 use ByRcsc\LaravelCustomerHealth\Data\ProductEventData;
 use ByRcsc\LaravelCustomerHealth\Events\ProductEvent;
 use ByRcsc\LaravelCustomerHealth\Jobs\RecordProductEvent as RecordProductEventJob;
+use ByRcsc\LaravelCustomerHealth\Models\HealthScoreRecord;
 use ByRcsc\LaravelCustomerHealth\Models\Milestone;
 use ByRcsc\LaravelCustomerHealth\Models\ProductEventRecord;
 use ByRcsc\LaravelCustomerHealth\Queries\FeatureUsageQuery;
@@ -17,10 +19,14 @@ use ByRcsc\LaravelCustomerHealth\Queries\InactiveSubjectsQuery;
 use ByRcsc\LaravelCustomerHealth\Queries\StalledOnboardingQuery;
 use ByRcsc\LaravelCustomerHealth\Registry\ChecklistRegistry;
 use ByRcsc\LaravelCustomerHealth\Registry\EventRegistry;
+use ByRcsc\LaravelCustomerHealth\Registry\HealthScoreRegistry;
 use ByRcsc\LaravelCustomerHealth\ValueObjects\Progress;
+use ByRcsc\LaravelCustomerHealth\ValueObjects\ScoreResult;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 final readonly class CustomerHealthManager
 {
@@ -30,6 +36,8 @@ final readonly class CustomerHealthManager
         private Dispatcher $bus,
         private Repository $config,
         private ChecklistRegistry $checklists,
+        private HealthScoreRegistry $scores,
+        private ComputeHealthScore $computeHealthScore,
     ) {}
 
     public function track(ProductEvent $event): void
@@ -127,6 +135,42 @@ final readonly class CustomerHealthManager
     public function stalledInOnboarding(int $days): StalledOnboardingQuery
     {
         return new StalledOnboardingQuery($days, $this->checklists);
+    }
+
+    public function compute(Trackable $subject, ?string $score = null): ScoreResult
+    {
+        return $this->computeHealthScore->handle($subject, $score);
+    }
+
+    public function score(Trackable $subject, ?string $score = null): ?ScoreResult
+    {
+        return $this->scoreRecords($subject, $score)
+            ->latest('computed_at')
+            ->latest('id')
+            ->first()
+            ?->toScoreResult();
+    }
+
+    /** @return Collection<int, ScoreResult> */
+    public function scoreHistory(Trackable $subject, ?string $score = null): Collection
+    {
+        return $this->scoreRecords($subject, $score)
+            ->oldest('computed_at')
+            ->oldest('id')
+            ->get()
+            ->map(fn (HealthScoreRecord $record): ScoreResult => ScoreResult::fromRecord($record));
+    }
+
+    /** @return Builder<HealthScoreRecord> */
+    private function scoreRecords(Trackable $subject, ?string $score): Builder
+    {
+        $identity = MorphIdentity::from($subject, 'subject');
+        $definition = $this->scores->resolve($score);
+
+        return HealthScoreRecord::query()
+            ->where('subject_type', $identity->type)
+            ->where('subject_id', $identity->id)
+            ->where('score', $definition::name());
     }
 
     private function configString(string $key): ?string

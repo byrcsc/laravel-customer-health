@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use ByRcsc\LaravelCustomerHealth\CustomerHealthServiceProvider;
+use ByRcsc\LaravelCustomerHealth\Models\HealthScoreRecord;
 use ByRcsc\LaravelCustomerHealth\Models\Milestone;
 use ByRcsc\LaravelCustomerHealth\Models\ProductEventRecord;
 use ByRcsc\LaravelCustomerHealth\Support\TableNames;
@@ -31,9 +32,10 @@ afterEach(function (): void {
 it('publishes and runs both storage migrations through Laravel', function (): void {
     $paths = ServiceProvider::pathsToPublish(CustomerHealthServiceProvider::class, 'customer-health-migrations');
 
-    expect(array_keys($paths))->toHaveCount(2)
+    expect(array_keys($paths))->toHaveCount(3)
         ->and(array_keys($paths)[0])->toEndWith('.php.stub')
-        ->and(array_keys($paths)[1])->toEndWith('.php.stub');
+        ->and(array_keys($paths)[1])->toEndWith('.php.stub')
+        ->and(array_keys($paths)[2])->toEndWith('.php.stub');
 
     try {
         expect(Artisan::call('vendor:publish', [
@@ -48,7 +50,8 @@ it('publishes and runs both storage migrations through Laravel', function (): vo
 
         expect(Artisan::call('migrate:fresh', ['--force' => true]))->toBe(0)
             ->and(Schema::hasTable(TableNames::events()))->toBeTrue()
-            ->and(Schema::hasTable(TableNames::milestones()))->toBeTrue();
+            ->and(Schema::hasTable(TableNames::milestones()))->toBeTrue()
+            ->and(Schema::hasTable(TableNames::scores()))->toBeTrue();
     } finally {
         File::delete(array_values($paths));
     }
@@ -59,6 +62,7 @@ it('creates the events and milestones schema with the required indexes', functio
 
     $eventIndexes = collect(Schema::getIndexes(TableNames::events()))->pluck('name');
     $milestoneIndexes = collect(Schema::getIndexes(TableNames::milestones()))->pluck('name');
+    $scoreIndexes = collect(Schema::getIndexes(TableNames::scores()))->pluck('name');
 
     expect(Schema::hasColumns(TableNames::events(), [
         'id', 'subject_type', 'subject_id', 'actor_type', 'actor_id', 'name',
@@ -76,7 +80,12 @@ it('creates the events and milestones schema with the required indexes', functio
         ->and($milestoneIndexes)->toContain(
             'ch_milestones_subject_name_unique',
             'ch_milestones_name_time_idx',
-        );
+        )
+        ->and(Schema::hasColumns(TableNames::scores(), [
+            'id', 'subject_type', 'subject_id', 'score', 'value', 'state',
+            'breakdown', 'computed_at',
+        ]))->toBeTrue()
+        ->and($scoreIndexes)->toContain('ch_scores_subject_score_time_idx');
 });
 
 it('enforces one milestone per subject and event name', function (): void {
@@ -170,13 +179,17 @@ it('uses renamed tables on a non-default connection end to end', function (): vo
     config()->set('customer-health.connection', 'tenant');
     config()->set('customer-health.table_names.events', 'tenant_product_events');
     config()->set('customer-health.table_names.milestones', 'tenant_product_milestones');
+    config()->set('customer-health.table_names.scores', 'tenant_customer_health_scores');
 
     runCustomerHealthStorageMigrations();
 
     expect(Schema::connection('tenant')->hasTable('tenant_product_events'))->toBeTrue()
         ->and(Schema::connection('tenant')->hasTable('tenant_product_milestones'))->toBeTrue()
+        ->and(Schema::connection('tenant')->hasTable('tenant_customer_health_scores'))->toBeTrue()
         ->and((new ProductEventRecord)->getConnectionName())->toBe('tenant')
         ->and((new ProductEventRecord)->getTable())->toBe('tenant_product_events')
         ->and((new Milestone)->getConnectionName())->toBe('tenant')
+        ->and((new HealthScoreRecord)->getConnectionName())->toBe('tenant')
+        ->and((new HealthScoreRecord)->getTable())->toBe('tenant_customer_health_scores')
         ->and((new Milestone)->getTable())->toBe('tenant_product_milestones');
 });

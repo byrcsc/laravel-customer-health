@@ -190,10 +190,16 @@ class NotifyCustomerSuccess
 Read the results anywhere:
 
 ```php
+CustomerHealth::compute($team);          // evaluate now and append history
 CustomerHealth::score($team);            // current value, state, per-signal breakdown
 CustomerHealth::scoreHistory($team);     // how it moved
 CustomerHealth::inState('at_risk')->get(); // one query across all customers
 ```
+
+`RecentActivity`, `FeatureActivity`, and `DistinctActors` are presence
+signals: they return 100 when matching activity exists inside their inclusive
+UTC window and 0 otherwise. Use a custom `Signal` when a count-based target is
+part of your product's health definition.
 
 ## Multi-tenancy
 

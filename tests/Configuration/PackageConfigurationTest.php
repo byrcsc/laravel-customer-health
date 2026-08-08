@@ -15,7 +15,8 @@ it('loads the config defaults', function (): void {
         'summaries' => 'customer_health_summaries',
     ])
         ->and(config('customer-health.connection'))->toBeNull()
-        ->and(config('customer-health.summary_connection'))->toBeNull();
+        ->and(config('customer-health.summary_connection'))->toBeNull()
+        ->and(config('customer-health.scores'))->toBe([]);
 });
 
 // The shipped config and TableNames::DEFAULTS name the same tables on

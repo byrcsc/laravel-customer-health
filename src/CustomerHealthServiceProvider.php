@@ -8,6 +8,8 @@ use ByRcsc\LaravelCustomerHealth\Events\ProductEvent;
 use ByRcsc\LaravelCustomerHealth\Onboarding\Checklist;
 use ByRcsc\LaravelCustomerHealth\Registry\ChecklistRegistry;
 use ByRcsc\LaravelCustomerHealth\Registry\EventRegistry;
+use ByRcsc\LaravelCustomerHealth\Registry\HealthScoreRegistry;
+use ByRcsc\LaravelCustomerHealth\Scoring\HealthScore;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Spatie\LaravelPackageTools\Package;
@@ -38,6 +40,14 @@ final class CustomerHealthServiceProvider extends PackageServiceProvider
 
             return new ChecklistRegistry($classes, $app->make(EventRegistry::class));
         });
+        $this->app->singleton(HealthScoreRegistry::class, function (Application $app): HealthScoreRegistry {
+            $config = $app->make(Repository::class);
+            $configured = $config->get('customer-health.scores', []);
+            /** @var list<class-string<HealthScore>> $classes */
+            $classes = is_array($configured) ? array_values($configured) : [];
+
+            return new HealthScoreRegistry($classes);
+        });
     }
 
     public function configurePackage(Package $package): void
@@ -48,6 +58,7 @@ final class CustomerHealthServiceProvider extends PackageServiceProvider
             ->hasMigrations([
                 'create_customer_health_events_table',
                 'create_customer_health_milestones_table',
+                'create_customer_health_scores_table',
             ]);
     }
 }

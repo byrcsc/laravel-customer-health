@@ -11,7 +11,9 @@ use ByRcsc\LaravelCustomerHealth\Queries\FeatureUsageQuery;
 use ByRcsc\LaravelCustomerHealth\Queries\InactiveSubjectsQuery;
 use ByRcsc\LaravelCustomerHealth\Queries\StalledOnboardingQuery;
 use ByRcsc\LaravelCustomerHealth\ValueObjects\Progress;
+use ByRcsc\LaravelCustomerHealth\ValueObjects\ScoreResult;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Facade;
 
 /**
@@ -23,6 +25,9 @@ use Illuminate\Support\Facades\Facade;
  * @method static InactiveSubjectsQuery inactive(int $days)
  * @method static Progress onboarding(Trackable $subject, ?string $checklist = null)
  * @method static StalledOnboardingQuery stalledInOnboarding(int $days)
+ * @method static ScoreResult compute(Trackable $subject, ?string $score = null)
+ * @method static ScoreResult|null score(Trackable $subject, ?string $score = null)
+ * @method static Collection<int, ScoreResult> scoreHistory(Trackable $subject, ?string $score = null)
  *
  * @see CustomerHealthManager
  */
