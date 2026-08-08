@@ -149,7 +149,7 @@ it('uses an index for subject feature window queries on mysql', function (): voi
     for ($id = 1; $id <= 2_000; $id++) {
         $rows[] = [
             'subject_type' => TestSubject::class,
-            'subject_id' => '42',
+            'subject_id' => (string) $id,
             'actor_type' => null,
             'actor_id' => null,
             'name' => $id % 2 === 0 ? 'workflow_created' : 'account_opened',
