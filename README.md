@@ -155,7 +155,7 @@ Declare a product event where your domain already knows it happened:
 ```php
 use ByRcsc\LaravelCustomerHealth\Events\ProductEvent;
 
-class WorkflowCreated extends ProductEvent
+final class WorkflowCreated extends ProductEvent
 {
     public static string $feature = 'workflows';
 
@@ -185,7 +185,7 @@ Define onboarding as an ordered checklist of milestones:
 ```php
 use ByRcsc\LaravelCustomerHealth\Onboarding\Checklist;
 
-class Onboarding extends Checklist
+final class Onboarding extends Checklist
 {
     public function steps(): array
     {
@@ -197,8 +197,9 @@ class Onboarding extends Checklist
     }
 }
 
-CustomerHealth::onboarding($team)->progress();     // 2 of 3
-CustomerHealth::onboarding($team)->stalledSince(); // ?CarbonImmutable
+$progress = CustomerHealth::onboarding($team);
+$progress->completedSteps(); // int
+$progress->stalledSince();   // ?CarbonImmutable
 ```
 
 Declare what "healthy" means for your product:
@@ -210,7 +211,7 @@ use ByRcsc\LaravelCustomerHealth\Scoring\Signals\FeatureAdopted;
 use ByRcsc\LaravelCustomerHealth\Scoring\Signals\OnboardingProgress;
 use ByRcsc\LaravelCustomerHealth\Scoring\Signals\RecentActivity;
 
-class CustomerHealthScore extends HealthScore
+final class CustomerHealthScore extends HealthScore
 {
     public function signals(): array
     {
@@ -249,13 +250,18 @@ milestone, and your application decides what a check-in looks like.
 
 ```php
 use ByRcsc\LaravelCustomerHealth\Events\HealthStateChanged;
+use Illuminate\Support\Facades\Log;
 
-class NotifyCustomerSuccess
+final class NotifyCustomerSuccess
 {
     public function handle(HealthStateChanged $event): void
     {
         if ($event->to === 'at_risk') {
-            // notify the CSM, open a ticket, send the Slack ping
+            Log::warning('Customer entered an at-risk health state.', [
+                'subject_type' => $event->record->subject_type,
+                'subject_id' => $event->record->subject_id,
+                'score' => $event->record->score,
+            ]);
         }
     }
 }
