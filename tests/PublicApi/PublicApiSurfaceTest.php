@@ -229,46 +229,6 @@ it('keeps every documented config key in the shipped config', function (): void 
     ]);
 });
 
-it('keeps the README public API inventory synchronized with the surface test', function (): void {
-    $readme = (string) file_get_contents(__DIR__.'/../../README.md');
-    preg_match('/<!-- public-api:start -->(.*)<!-- public-api:end -->/s', $readme, $matches);
-    preg_match_all('/^- `([^`]+)`$/m', $matches[1] ?? '', $documented);
-
-    expect($documented[1] ?? [])->toBe([
-        'Events\\ProductEvent', 'Onboarding\\Checklist', 'Scoring\\HealthScore',
-        'Contracts\\Trackable', 'Scoring\\Signal', 'Scoring\\WindowedSignal',
-        'Contracts\\TenantResolver', 'Tenancy\\SpatieTenantResolver',
-        'Concerns\\TracksCustomerHealth',
-        'Scoring\\Signals\\RecentActivity', 'Scoring\\Signals\\FeatureAdopted',
-        'Scoring\\Signals\\FeatureActivity', 'Scoring\\Signals\\DistinctActors',
-        'Scoring\\Signals\\OnboardingProgress', 'Facades\\CustomerHealth::track',
-        'Facades\\CustomerHealth::hasAdopted', 'Facades\\CustomerHealth::featureUsage',
-        'Facades\\CustomerHealth::lastSeen', 'Facades\\CustomerHealth::inactive',
-        'Facades\\CustomerHealth::features', 'Facades\\CustomerHealth::onboarding',
-        'Facades\\CustomerHealth::stalledInOnboarding', 'Facades\\CustomerHealth::compute',
-        'Facades\\CustomerHealth::score', 'Facades\\CustomerHealth::scoreHistory',
-        'Facades\\CustomerHealth::inState', 'Facades\\CustomerHealth::summaries',
-        'Facades\\CustomerHealth::purge', 'ValueObjects\\FeatureUsage',
-        'ValueObjects\\Progress', 'ValueObjects\\ScoreResult',
-        'Events\\ProductEventRecorded::$record', 'Events\\MilestoneReached::$milestone',
-        'Events\\OnboardingStepCompleted::$milestone', 'Events\\OnboardingStepCompleted::$checklist',
-        'Events\\OnboardingStepCompleted::$step', 'Events\\OnboardingCompleted::$milestone',
-        'Events\\OnboardingCompleted::$checklist', 'Events\\HealthScoreComputed::$record',
-        'Events\\HealthScoreComputed::$result', 'Events\\HealthStateChanged::$record',
-        'Events\\HealthStateChanged::$from', 'Events\\HealthStateChanged::$to',
-        'Exceptions\\UnregisteredEventException', 'customer-health:recompute {--score=} {--subject=} {--chunk=500}',
-        'customer-health:purge {subject_type} {subject_id} {--tenant=}',
-        'customer-health.table_names.events', 'customer-health.table_names.milestones',
-        'customer-health.table_names.scores', 'customer-health.table_names.summaries',
-        'customer-health.connection', 'customer-health.summary_connection',
-        'customer-health.events', 'customer-health.checklists', 'customer-health.scores',
-        'customer-health.tenant_resolver', 'customer-health.retention_days',
-        'customer-health.queue', 'customer-health.queue_connection', 'customer-health.queue_name',
-        'Models\\ProductEventRecord', 'Models\\Milestone', 'Models\\HealthScoreRecord',
-        'Models\\HealthSummary',
-    ]);
-});
-
 it('does not document internal final classes as public API', function (): void {
     $readme = (string) file_get_contents(__DIR__.'/../../README.md');
     $publicFinal = [

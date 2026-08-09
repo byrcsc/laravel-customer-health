@@ -88,7 +88,7 @@
     "support": {
         "issues": "https://github.com/byrcsc/laravel-customer-health/issues",
         "forum": "https://github.com/byrcsc/laravel-customer-health/discussions",
-        "docs": "https://github.com/byrcsc/laravel-customer-health#readme",
+        "docs": "https://docs.rcsc.dev/laravel-customer-health/v1/introduction",
         "security": "https://github.com/byrcsc/laravel-customer-health/security/policy",
         "source": "https://github.com/byrcsc/laravel-customer-health"
     }
