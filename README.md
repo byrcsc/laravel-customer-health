@@ -22,66 +22,60 @@ changes.
 | 12.x | 8.3, 8.4 |
 | 13.x | 8.3, 8.4 |
 
-Tested on MySQL and PostgreSQL, including a database-per-tenant setup with
-`spatie/laravel-multitenancy`.
+Tested on MySQL and PostgreSQL, including database-per-tenant applications
+using `spatie/laravel-multitenancy`.
 
 ## Installation
 
-Install the package and publish its migrations:
+Install the package, publish its configuration and migrations, then migrate:
 
 ```bash
 composer require byrcsc/laravel-customer-health
+php artisan vendor:publish --tag="customer-health-config"
 php artisan vendor:publish --tag="customer-health-migrations"
 php artisan migrate
 ```
 
-Publish the configuration before migrating when you need custom table names
-or custom connections:
-
-```bash
-php artisan vendor:publish --tag="customer-health-config"
-```
-
-Schedule the recompute command. Health scores and inactivity detection depend
-on it: a customer going quiet produces no event, so only a scheduled pass can
-notice the silence.
+Schedule score recomputation. Inactivity produces no event, so the scheduled
+command is what notices customers going quiet.
 
 ```php
-// routes/console.php
+use Illuminate\Support\Facades\Schedule;
+
 Schedule::command('customer-health:recompute')->daily();
 ```
 
 ## Concepts
 
-- A **subject** is the entity whose health you care about: a team, an
-  organization, a user. Any Eloquent model becomes one by implementing the
-  `Trackable` interface. Every recorded event also carries an optional
-  **actor**, the user who did the thing.
-- A **product event** is a PHP class the application declares: the event
-  name, the **feature** it belongs to, and whether its first occurrence is a
-  **milestone**. Declarations are what make queries business-aware.
-- First occurrences are written to a permanent **milestones** table at track
-  time. Raw events can be pruned later without ever changing the answer to
-  "has this customer adopted feature X".
-- An **onboarding checklist** is an ordered list of milestone events. The
-  package derives per-subject progress and fires step and completion events.
-- A **health score** is a class composing weighted **signals**, each
-  answering 0 to 100 for a subject. The package computes the weighted total
-  on schedule, stores history with a per-signal breakdown, maps ranges to
-  **states** such as `healthy` or `at_risk`, and fires `HealthStateChanged`
-  when a subject crosses a threshold.
-- Current score and state per subject are synced to a compact **summaries**
-  table on a configurable connection, so "show me every at-risk customer" is
-  one query even when raw events live in per-tenant databases.
+A **subject** is the Eloquent model whose health you track, such as a team or
+organization. A product event records a business action against that subject,
+with an optional user as its **actor**.
+
+A milestone preserves the first occurrence of an event for adoption and
+onboarding. Health scores combine weighted signals, store explainable history,
+and update a compact current summary for each subject.
 
 ## Quick start
 
-Declare a product event where your domain already knows it happened:
+Make the customer model trackable:
+
+```php
+use ByRcsc\LaravelCustomerHealth\Concerns\TracksCustomerHealth;
+use ByRcsc\LaravelCustomerHealth\Contracts\Trackable;
+use Illuminate\Database\Eloquent\Model;
+
+final class Team extends Model implements Trackable
+{
+    use TracksCustomerHealth;
+}
+```
+
+Declare a business event and mark its first occurrence as a milestone:
 
 ```php
 use ByRcsc\LaravelCustomerHealth\Events\ProductEvent;
 
-class WorkflowCreated extends ProductEvent
+final class WorkflowCreated extends ProductEvent
 {
     public static string $feature = 'workflows';
 
@@ -89,282 +83,45 @@ class WorkflowCreated extends ProductEvent
 }
 ```
 
-Record it:
+Register the event in `config/customer-health.php`:
+
+```php
+'events' => [WorkflowCreated::class],
+```
+
+Track the event after the business operation succeeds, then query adoption:
 
 ```php
 use ByRcsc\LaravelCustomerHealth\Facades\CustomerHealth;
 
 CustomerHealth::track(new WorkflowCreated($team, actor: $user));
+
+CustomerHealth::hasAdopted($team, 'workflows'); // true
 ```
 
-Ask business questions:
+## Documentation
 
-```php
-CustomerHealth::hasAdopted($team, 'workflows');        // bool, prune-safe
-CustomerHealth::featureUsage('workflows')->for($team); // first/last use, counts, distinct actors
-CustomerHealth::lastSeen($team);                       // ?CarbonImmutable
-CustomerHealth::inactive(days: 14)->get();             // subjects gone quiet
-```
+The [versioned documentation][documentation] contains the complete setup,
+guides, operations advice, and API reference:
 
-Define onboarding as an ordered checklist of milestones:
-
-```php
-use ByRcsc\LaravelCustomerHealth\Onboarding\Checklist;
-
-class Onboarding extends Checklist
-{
-    public function steps(): array
-    {
-        return [
-            AccountCreated::class,
-            WorkflowCreated::class,
-            TeammateInvited::class,
-        ];
-    }
-}
-
-CustomerHealth::onboarding($team)->progress();     // 2 of 3
-CustomerHealth::onboarding($team)->stalledSince(); // ?CarbonImmutable
-```
-
-Declare what "healthy" means for your product:
-
-```php
-use ByRcsc\LaravelCustomerHealth\Scoring\HealthScore;
-use ByRcsc\LaravelCustomerHealth\Scoring\Signals\DistinctActors;
-use ByRcsc\LaravelCustomerHealth\Scoring\Signals\FeatureAdopted;
-use ByRcsc\LaravelCustomerHealth\Scoring\Signals\OnboardingProgress;
-use ByRcsc\LaravelCustomerHealth\Scoring\Signals\RecentActivity;
-
-class CustomerHealthScore extends HealthScore
-{
-    public function signals(): array
-    {
-        return [
-            new RecentActivity(days: 7, weight: 30),
-            new FeatureAdopted('workflows', weight: 30),
-            new DistinctActors(days: 30, weight: 20),
-            new OnboardingProgress(Onboarding::class, weight: 20),
-        ];
-    }
-
-    public function states(): array
-    {
-        return ['at_risk' => 0, 'watch' => 50, 'healthy' => 75];
-    }
-}
-```
-
-Register your declarations in `config/customer-health.php`:
-
-```php
-'events' => [
-    AccountCreated::class,
-    WorkflowCreated::class,
-    TeammateInvited::class,
-],
-
-'checklists' => [Onboarding::class],
-
-'scores' => [CustomerHealthScore::class],
-```
-
-React to state changes with a plain listener. This is the whole "check-in"
-story: the package tells you the moment a customer becomes at-risk or hits a
-milestone, and your application decides what a check-in looks like.
-
-```php
-use ByRcsc\LaravelCustomerHealth\Events\HealthStateChanged;
-
-class NotifyCustomerSuccess
-{
-    public function handle(HealthStateChanged $event): void
-    {
-        if ($event->to === 'at_risk') {
-            // notify the CSM, open a ticket, send the Slack ping
-        }
-    }
-}
-```
-
-Read the results anywhere:
-
-```php
-CustomerHealth::compute($team);          // evaluate now and append history
-CustomerHealth::score($team);            // current value, state, per-signal breakdown
-CustomerHealth::scoreHistory($team);     // how it moved
-CustomerHealth::inState('at_risk')->get(); // one query across all customers
-```
-
-`RecentActivity`, `FeatureActivity`, and `DistinctActors` are presence
-signals: they return 100 when matching activity exists inside their inclusive
-UTC window and 0 otherwise. Use a custom `Signal` when a count-based target is
-part of your product's health definition.
-
-## Multi-tenancy
-
-The core is tenancy-agnostic: events, milestones, and scores are written to
-a configurable connection (the current default connection by default), which
-is exactly what database-per-tenant packages switch for you.
-
-For `spatie/laravel-multitenancy` v4 with one database per tenant, install the
-optional integration and publish Spatie's configuration:
-
-```bash
-composer require spatie/laravel-multitenancy
-php artisan vendor:publish --tag="multitenancy-config"
-```
-
-Configure separate named connections. The `tenant` connection starts without
-a database because Spatie fills it from the current tenant's `database`
-attribute:
-
-```php
-// config/database.php
-'connections' => [
-    'landlord' => [/* driver, host, database, credentials, ... */],
-    'tenant' => [/* same server settings, but 'database' => null */],
-],
-```
-
-```php
-// config/multitenancy.php
-'tenant_model' => App\Models\Tenant::class,
-'switch_tenant_tasks' => [
-    Spatie\Multitenancy\Tasks\SwitchTenantDatabaseTask::class,
-],
-'tenant_database_connection_name' => 'tenant',
-'landlord_database_connection_name' => 'landlord',
-'queues_are_tenant_aware_by_default' => true,
-```
-
-Point package history at the switched connection and compact summaries at the
-landlord. The optional resolver is safe to reference only when Spatie is
-installed:
-
-```php
-// config/customer-health.php
-'connection' => 'tenant',
-'summary_connection' => 'landlord',
-'tenant_resolver' => ByRcsc\LaravelCustomerHealth\Tenancy\SpatieTenantResolver::class,
-```
-
-Then split the published package migrations by storage role:
-
-- Include the package migrations in your tenant migrations path; the
-  events, milestones, and scores migrations run for every tenant. Run only the
-  summaries migration on the landlord connection.
-- Run recomputation per tenant: `php artisan tenants:artisan
-  "customer-health:recompute"`.
-- Summaries carry the current tenant, so the landlord can answer "which
-  customers are at risk" across every tenant database with one query.
-
-The repository workbench contains the exact connection, multitenancy, package,
-tenant-model, and tenant-subject configuration shown above. CI exercises the
-full flow against MySQL with two tenant databases. Single-database apps need
-none of it: leave the connections and resolver at their defaults.
-
-## Queued writes
-
-Tracking is a direct insert by default, which suits business-level events.
-High-traffic apps can switch to queued writes:
-
-```php
-'queue' => true,
-```
-
-The default is synchronous, so the quick start records its first event
-without a queue worker. Once queued writes are enabled, a running worker is
-required. The queue connection and name can be selected with
-`queue_connection` and `queue_name`; null uses the application's defaults.
-
-Queue retries intentionally write another raw event because the package
-cannot know whether the business event itself was delivered twice. Milestone
-rows remain exactly once through their database unique constraint.
-
-Spatie v4 makes queued jobs tenant-aware by default. Keep
-`queues_are_tenant_aware_by_default` enabled (or explicitly list the package's
-`Jobs\RecordProductEvent` job under `tenant_aware_jobs`). The compatibility
-test dispatches through a central database queue, clears the current tenant,
-and runs a worker to prove each write lands in the originating tenant database.
-
-## Troubleshooting
-
-### Scores are never computed
-
-Confirm `customer-health:recompute` is scheduled and that Laravel's scheduler
-is running. Tracking an event does not compute a score in v1; the scheduled
-command is deliberately what notices both new activity and customers going
-quiet. Run `php artisan customer-health:recompute` manually to verify the
-registered score definitions and inspect any per-subject failures.
-
-## Retention and privacy
-
-Raw events can be pruned without losing lifetime facts. Milestones, scores,
-and summaries are permanent; adoption and onboarding answers never change
-because old events were deleted.
-
-```php
-'retention_days' => 365, // null (default) keeps raw events forever
-```
-
-```php
-use ByRcsc\LaravelCustomerHealth\Models\ProductEventRecord;
-
-Schedule::command('model:prune', [
-    '--model' => [ProductEventRecord::class],
-])->daily();
-```
-
-Retention uses each event's UTC `occurred_at` value. Keep `retention_days` at
-least as long as the longest activity window in any registered health score;
-`customer-health:recompute` warns when a built-in or custom `WindowedSignal`
-needs more history than retention preserves. Milestone-based adoption and
-onboarding answers remain stable after pruning, while `RecentActivity`,
-`FeatureActivity`, `DistinctActors`, and other raw-event windows may change.
-
-To erase a customer entirely, for offboarding or a data-deletion request:
-
-```bash
-php artisan customer-health:purge "App\Models\Team" 42
-```
-
-or `CustomerHealth::purge($team)` from code. Both remove the subject's
-events, milestones, score history, and summaries. In a database-per-tenant
-application, run the command inside Spatie's tenant context:
-
-```bash
-php artisan tenants:artisan \
-  'customer-health:purge "App\\Models\\Team" 42' \
-  --tenant=7
-```
-
-The outer `--tenant` selects the tenant database. If the active integration
-cannot resolve the summary tenant id, the inner command also accepts
-`--tenant=7` as a landlord-summary match override. Purges are transactional on
-each connection; no database abstraction can make two separate connections a
-single distributed transaction, so rerun a failed purge before deleting the
-application's subject model.
+- [Installation and setup][installation]
+- [Full quick start][quick-start]
+- [Production operations][production-operations]
+- [Public API reference][public-api]
 
 ## Out of scope
 
 Things this package will not do, so you can build on what it does do:
 
-- **No page-view or session analytics.** Business events only. Use a web
-  analytics tool alongside it.
-- **No automation engine.** No built-in check-in scheduler, playbooks, or
-  action rules. The package fires Laravel events; your listeners are the
-  automation.
-- **No dashboard UI.** The query API returns data; your application renders
-  it.
-- **No feedback or survey capture.** NPS and CSAT belong to another tool or
-  a future sibling package.
-- **No metric warehouse.** No arbitrary KPI counters, time-series rollups,
-  or charting endpoints. Signals, adoption queries, and score history are
-  the metrics surface.
-- **No opinions about your customers.** The package ships signal building
-  blocks, not default weights or thresholds. What "healthy" means is your
-  declaration.
+- Page-view or session analytics.
+- Automation engine: check-in scheduler, playbooks, or action rules.
+- Dashboard UI.
+- Feedback or survey capture, including NPS and CSAT.
+- Metric warehouse: arbitrary KPI counters, time-series rollups, or charting
+  endpoints.
+- Event-triggered instant recomputation.
+- First-class adapters for tenancy packages beyond the tested
+  `spatie/laravel-multitenancy` compatibility.
 
 ## Versioning
 
@@ -397,3 +154,9 @@ Everything gets read.
 ## License
 
 MIT. See [LICENSE.md](LICENSE.md). Changelog in [CHANGELOG.md](CHANGELOG.md).
+
+[documentation]: https://docs.rcsc.dev/laravel-customer-health/v1/introduction
+[installation]: https://docs.rcsc.dev/laravel-customer-health/v1/installation
+[production-operations]: https://docs.rcsc.dev/laravel-customer-health/v1/production-operations
+[public-api]: https://docs.rcsc.dev/laravel-customer-health/v1/public-api
+[quick-start]: https://docs.rcsc.dev/laravel-customer-health/v1/quick-start

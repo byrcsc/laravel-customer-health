@@ -16,7 +16,6 @@
 
 # Planning documents — useful in the repo, dead weight in a vendor install.
 /issues             export-ignore
-/SPEC.md            export-ignore
 
 # Repository governance — useful on GitHub, dead weight in a vendor install.
 /CONTRIBUTING.md    export-ignore

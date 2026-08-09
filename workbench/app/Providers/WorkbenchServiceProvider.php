@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Workbench\App\Providers;
 
+use ByRcsc\LaravelCustomerHealth\Events\HealthStateChanged;
 use Illuminate\Support\ServiceProvider;
+use Workbench\App\Listeners\NotifyCustomerSuccess;
 
 /**
- * The one file that stands in for an application's own service provider. Demo
- * wiring (trackable models, event declarations, listeners) lands here with
- * issue E2.
+ * Loads the demo's isolated config and registers its state-change listener.
  */
 final class WorkbenchServiceProvider extends ServiceProvider
 {
@@ -26,6 +26,9 @@ final class WorkbenchServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        //
+        $this->app->make('events')->listen(
+            HealthStateChanged::class,
+            NotifyCustomerSuccess::class,
+        );
     }
 }
